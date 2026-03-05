@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fake News Detector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 700px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        p {
+            color: rgba(255,255,255,0.6);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            color: white;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+        }
+        textarea::placeholder {
+            color: rgba(255,255,255,0.4);
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .result.fake {
+            background: rgba(233, 69, 96, 0.3);
+            border: 2px solid #e94560;
+        }
+        .result.real {
+            background: rgba(46, 213, 115, 0.3);
+            border: 2px solid #2ed573;
+        }
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .result-info {
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 5px;
+        }
+        .section-title {
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        .word-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin: 3px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        .word-fake {
+            background: rgba(233, 69, 96, 0.4);
+            color: #ff8fa3;
+            border: 1px solid #e94560;
+        }
+        .word-real {
+            background: rgba(46, 213, 115, 0.4);
+            color: #7effc4;
+            border: 1px solid #2ed573;
+        }
+        .news-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+        }
+        .news-item a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+        .news-source {
+            color: rgba(255,255,255,0.4);
+            font-size: 0.8rem;
+            margin-top: 3px;
+        }
+        .loading {
+            color: white;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fake News Detector</h1>
+        <p>Paste any news article to check if it is real or fake</p>
+
+        <textarea id="newsText"
+            placeholder="Paste your news article here..."></textarea>
+
+        <button onclick="analyzeNews()">ANALYZE NEWS</button>
+
+        <div class="loading" id="loading">
+            Analyzing... Please wait...
+        </div>
+
+        <div class="result" id="result">
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-info" id="resultConfidence"></div>
+            <div class="result-info" id="resultMessage"></div>
+
+            <!-- Explanation Section -->
+            <div id="explanationSection"></div>
+
+            <!-- Related News Section -->
+            <div id="relatedNews"></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">98.76%</div>
+                <div class="stat-label">Accuracy</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">44,898</div>
+                <div class="stat-label">Articles Trained</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">LIVE</div>
+                <div class="stat-label">Internet Verified</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function analyzeNews() {
+            var text = document.getElementById('newsText').value;
+
+            if (text.trim() === '') {
+                alert('Please paste a news article first!');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            try {
+                var response = await fetch('http://127.0.0.1:8000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+
+                var data = await response.json();
+
+                var resultDiv = document.getElementById('result');
+                var resultTitle = document.getElementById('resultTitle');
+                var resultConfidence = document.getElementById('resultConfidence');
+                var resultMessage = document.getElementById('resultMessage');
+                var explanationSection = document.getElementById('explanationSection');
+                var relatedNews = document.getElementById('relatedNews');
+
+                if (data.prediction === 'FAKE') {
+                    resultDiv.className = 'result fake';
+                    resultTitle.textContent = 'FAKE NEWS DETECTED!';
+                } else {
+                    resultDiv.className = 'result real';
+                    resultTitle.textContent = 'REAL NEWS';
+                }
+
+                resultConfidence.textContent = 'Confidence: ' + data.confidence + '%';
+                resultMessage.textContent = data.message;
+
+                // Show explanation
+                var expHtml = '';
+                if (data.explanation) {
+                    if (data.prediction === 'FAKE' && data.explanation.suspicious_words.length > 0) {
+                        expHtml += '<div class="section-title">Why is this FAKE? — Suspicious Words Found:</div>';
+                        expHtml += '<div>';
+                        for (var i = 0; i < data.explanation.suspicious_words.length; i++) {
+                            var word = data.explanation.suspicious_words[i];
+                            expHtml += '<span class="word-tag word-fake">';
+                            expHtml += word.word + ' (' + word.influence + ')';
+                            expHtml += '</span>';
+                        }
+                        expHtml += '</div>';
+                    }
+                    if (data.prediction === 'REAL' && data.explanation.positive_words.length > 0) {
+                        expHtml += '<div class="section-title">Why is this REAL? — Credible Words Found:</div>';
+                        expHtml += '<div>';
+                        for (var i = 0; i < data.explanation.positive_words.length; i++) {
+                            var word = data.explanation.positive_words[i];
+                            expHtml += '<span class="word-tag word-real">';
+                            expHtml += word.word + ' (' + word.influence + ')';
+                            expHtml += '</span>';
+                        }
+                        expHtml += '</div>';
+                    }
+                }
+                explanationSection.innerHTML = expHtml;
+
+                // Show related news
+                var newsHtml = '';
+                if (data.related_news && data.related_news.length > 0) {
+                    newsHtml += '<div class="section-title">Related News from Trusted Sources:</div>';
+                    for (var i = 0; i < data.related_news.length; i++) {
+                        var article = data.related_news[i];
+                        newsHtml += '<div class="news-item">';
+                        newsHtml += '<a href="' + article.url + '" target="_blank">' + article.title + '</a>';
+                        newsHtml += '<div class="news-source">' + article.source + '</div>';
+                        newsHtml += '</div>';
+                    }
+                }
+                relatedNews.innerHTML = newsHtml;
+
+                resultDiv.style.display = 'block';
+
+            } catch (error) {
+                alert('Error! Make sure API is running on port 8000!');
+            }
+
+            document.getElementById('loading').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
